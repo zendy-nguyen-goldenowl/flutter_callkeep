@@ -6,10 +6,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 
 class CallKeepBroadcastReceiver : BroadcastReceiver() {
 
     companion object {
+        var isSoundServiceInitial = false
 
         const val ACTION_CALL_INCOMING =
                 "co.doneservices.callkeep.ACTION_CALL_INCOMING"
@@ -110,12 +112,7 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
                     sendEventFlutter(ACTION_CALL_INCOMING, data)
                     addCall(context, Data.fromBundle(data))
 
-                    if (callKeepNotificationManager.incomingChannelEnabled()) {
-                        val soundPlayerServiceIntent =
-                            Intent(context, CallKeepSoundPlayerService::class.java)
-                        soundPlayerServiceIntent.putExtras(data)
-                        context.startService(soundPlayerServiceIntent)
-                    }
+                    startSoundService(context, data)
                 } catch (error: Exception) {
                     error.printStackTrace()
                 }
@@ -131,7 +128,7 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
             "${context.packageName}.${ACTION_CALL_ACCEPT}" -> {
                 try {
                     sendEventFlutter(ACTION_CALL_ACCEPT, data)
-                    context.stopService(Intent(context, CallKeepSoundPlayerService::class.java))
+                    stopSoundService(context)
                     callKeepNotificationManager.clearIncomingNotification(data)
                     addCall(context, Data.fromBundle(data), true)
                 } catch (error: Exception) {
@@ -141,7 +138,7 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
             "${context.packageName}.${ACTION_CALL_DECLINE}" -> {
                 try {
                     sendEventFlutter(ACTION_CALL_DECLINE, data)
-                    context.stopService(Intent(context, CallKeepSoundPlayerService::class.java))
+                    stopSoundService(context)
                     callKeepNotificationManager.clearIncomingNotification(data)
                     removeCall(context, Data.fromBundle(data))
                 } catch (error: Exception) {
@@ -151,7 +148,7 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
             "${context.packageName}.${ACTION_CALL_ENDED}" -> {
                 try {
                     sendEventFlutter(ACTION_CALL_ENDED, data)
-                    context.stopService(Intent(context, CallKeepSoundPlayerService::class.java))
+                    stopSoundService(context)
                     callKeepNotificationManager.clearIncomingNotification(data)
                     removeCall(context, Data.fromBundle(data))
                 } catch (error: Exception) {
@@ -161,7 +158,7 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
             "${context.packageName}.${ACTION_CALL_TIMEOUT}" -> {
                 try {
                     sendEventFlutter(ACTION_CALL_TIMEOUT, data)
-                    context.stopService(Intent(context, CallKeepSoundPlayerService::class.java))
+                    stopSoundService(context)
                     if (data.getBoolean(EXTRA_CALLKEEP_SHOW_MISSED_CALL_NOTIFICATION, true)) {
                         callKeepNotificationManager.showMissCallNotification(data)
                     }
@@ -185,12 +182,34 @@ class CallKeepBroadcastReceiver : BroadcastReceiver() {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
+    private fun startSoundService(context: Context, data: Bundle){
+        val callKeepNotificationManager = CallKeepNotificationManager(context)
+
+        val soundFile = data.getString(
+            EXTRA_CALLKEEP_RINGTONE_FILE_NAME,
+            ""
+        )
+
+        if (callKeepNotificationManager.incomingChannelEnabled() && soundFile.isNotEmpty()) {
+            val soundPlayerServiceIntent =
+                Intent(context, CallKeepSoundPlayerService::class.java)
+            soundPlayerServiceIntent.putExtras(data)
+            context.startService(soundPlayerServiceIntent)
+            isSoundServiceInitial = true
+        }
+    }
+
+    private fun stopSoundService(context: Context){
+        if(isSoundServiceInitial){
+            context.stopService(Intent(context, CallKeepSoundPlayerService::class.java))
+            isSoundServiceInitial = false
+        }
+    }
+
     private fun sendEventFlutter(event: String, bundle: Bundle) {
         CallKeepPlugin.sendEvent(event, bundle.toData())
     }
-    
-    @Suppress("UNCHECKED_CAST")
+
     private fun Bundle.toData(): Map<String, Any> {
         val android = mapOf(
             "ringtoneFileName" to getString(EXTRA_CALLKEEP_RINGTONE_FILE_NAME, ""),

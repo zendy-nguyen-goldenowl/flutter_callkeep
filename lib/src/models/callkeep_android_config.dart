@@ -19,6 +19,8 @@ class CallKeepAndroidConfig {
   final bool showCallBackAction;
 
   /// File name of the ringtone that is put into /android/app/src/main/res/raw/
+  ///
+  /// Mute ringtone if this is empty
   final String ringtoneFileName;
 
   /// Incoming call screen/notification accent color in hex

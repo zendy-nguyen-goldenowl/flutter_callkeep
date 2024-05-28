@@ -25,7 +25,7 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         @SuppressLint("StaticFieldLeak")
         private var instance: CallKeepPlugin? = null
 
-        public fun getInstance(): CallKeepPlugin  {
+        fun getInstance(): CallKeepPlugin  {
             if(instance == null){
                 instance = CallKeepPlugin()
             }
@@ -75,7 +75,7 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
  //       sharePluginWithRegister(flutterPluginBinding, this)
     }
 
-    public fun showIncomingNotification(data: Data) {
+    fun showIncomingNotification(data: Data) {
         data.from = "notification"
         callKeepNotificationManager?.showIncomingNotification(data.toBundle())
         //send BroadcastReceiver
@@ -87,11 +87,12 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         )
     }
 
-    public fun showMissCallNotification(data: Data) {
-        callKeepNotificationManager?.showIncomingNotification(data.toBundle())
+    fun showMissCallNotification(data: Data) {
+        data.from = "notification"
+        callKeepNotificationManager?.showMissCallNotification(data.toBundle())
     }
 
-    public fun startCall(data: Data) {
+    fun startCall(data: Data) {
         context?.sendBroadcast(
             CallKeepBroadcastReceiver.getIntentStart(
                 requireNotNull(context),
@@ -100,7 +101,7 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         )
     }
 
-    public fun endCall(data: Data) {
+    fun endCall(data: Data) {
         context?.sendBroadcast(
             CallKeepBroadcastReceiver.getIntentEnded(
                 requireNotNull(context),
@@ -109,7 +110,7 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         )
     }
 
-    public fun endAllCalls() {
+    fun endAllCalls() {
         val calls = getDataActiveCalls(context)
         calls.forEach {
             context?.sendBroadcast(
@@ -140,8 +141,7 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                 }
                 "showMissCallNotification" -> {
                     val data = Data(call.arguments()?: HashMap<String, Any?>())
-                    data.from = "notification"
-                    callKeepNotificationManager?.showMissCallNotification(data.toBundle())
+                    showMissCallNotification(data)
                     result.success("OK")
                 }
                 "startCall" -> {
@@ -241,6 +241,4 @@ class CallKeepPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             eventSink = null
         }
     }
-
-
 }
